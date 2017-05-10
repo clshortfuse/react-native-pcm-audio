@@ -1,0 +1,27 @@
+{
+  "name": "react-native-pcm-audio",
+  "version": "0.0.1",
+  "author": "Carlos Lopez Jr.",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/clshortfuse/react-native-pcm-audio.git"
+  },
+  "bugs": {
+    "url": "https://github.com/clshortfuse/react-native-pcm-audio/issues"
+  },
+  "homepage": "https://github.com/clshortfuse/react-native-pcm-audio",
+  "keywords": [
+    "react-native",
+    "android",
+    "library"
+  ],
+  "scripts": {
+    "start": "node node_modules/react-native/local-cli/cli.js start",
+    "test": "jest"
+  },
+  "peerDependencies": {
+    "react-native": ">=0.38.0"
+  }
+}
