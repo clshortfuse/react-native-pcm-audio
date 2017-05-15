@@ -4,6 +4,10 @@ import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 
+import android.util.Base64;
+import android.util.Base64InputStream;
+
+import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
@@ -11,8 +15,9 @@ import com.facebook.react.bridge.ReactMethod;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Module extends ReactContextBaseJavaModule {
+public class PcmAudioModule extends ReactContextBaseJavaModule {
 
+  Audiotrack mAudioTrack;
 
   public Module(ReactApplicationContext reactContext) {
     super(reactContext);
@@ -30,10 +35,72 @@ public class Module extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void build(ReadableMap options) {
+  public void build(ReadableMap options, final Callback callback) {
     DecodedOptions decodedOptions = new DecodedOptions(options);
-    AudioTrack player = getAudioTrack(options);
+    mAudioTrack = getAudioTrack(options);
+    if (options.hasKey("onMarkerReached") || option.hasKey("onPeriodicNotification")) {
+      mAudioTrack.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener() {
+        @Override
+        void onMarkerReached (AudioTrack track) {
+          callback.invoke("onMarkerReached");
+        }
+        
+        @Override
+        void onPeriodicNotification (AudioTrack track) {
+          callback.invoke("onPeriodicNotification");
+        }
+      })
+    }
   }
+  
+  @ReactMethod
+  public void flush() {
+    mAudiotrack.flush();
+  }
+  
+  @ReactMethod
+  public void write(String base64Data) {
+    InputStream stream = new ByteArrayInputStream(base64Data.getBytes());
+    Base64InputStream decoder = new Base64InputStream(stream, Base64.DEFAULT);
+    byte[] buffer = new byte[mBase64BufferSize];
+    int len;
+    while ((len = decoder.read(buffer)) != -1) {
+      mAudioTrack.write(buffer, 0, len);
+    }
+    decoder.close();
+  }
+  
+  @ReactMethod
+  public void stop() {
+    mAudiotrack.stop();
+  }
+  
+  @ReactMethod
+  public void play() {
+    mAudiotrack.play();
+  }
+  
+  @ReactMethod
+  public void release() {
+    mAudiotrack.release();
+  }
+  
+  @ReactMethod
+  public int getNotificationMarkerPosition() {
+    return mAudiotrack.getNotificationMarkerPosition();
+  }
+  
+  @ReactMethod
+  public int getSampleRate() {
+    return mAudiotrack.getSampleRate();
+  }
+
+  @ReactMethod
+  public boolean setPositionNotificationPeriod(int periodInFrames)
+    return (mAudiotrack.setPositionNotificationPeriod(periodInFrames) == 0);
+  }
+
+  private const mBase64BufferSize = 1024;
 
   private getAudioTrack(DecodedOptions options) {
     if (Build.VERSION.SDK_INT >= 23) {
