@@ -1,25 +1,35 @@
 package org.shortfuse.reactnativepcmaudio;
 
+import android.annotation.TargetApi;
+
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioTrack;
 
+import android.os.Build;
+
 import android.util.Base64;
 import android.util.Base64InputStream;
+
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.io.IOException;
 
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.ReadableMap;
+import com.facebook.react.bridge.ReadableMapKeySetIterator;
 
 import java.util.HashMap;
 import java.util.Map;
 
 public class PcmAudioModule extends ReactContextBaseJavaModule {
 
-  Audiotrack mAudioTrack;
+  AudioTrack mAudioTrack;
 
-  public Module(ReactApplicationContext reactContext) {
+  public PcmAudioModule(ReactApplicationContext reactContext) {
     super(reactContext);
   }
 
@@ -37,72 +47,82 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void build(ReadableMap options, final Callback callback) {
     DecodedOptions decodedOptions = new DecodedOptions(options);
-    mAudioTrack = getAudioTrack(options);
-    if (options.hasKey("onMarkerReached") || option.hasKey("onPeriodicNotification")) {
-      mAudioTrack.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener() {
+    this.mAudioTrack = getAudioTrack(decodedOptions);
+    if (options.hasKey("onMarkerReached") || options.hasKey("onPeriodicNotification")) {
+      this.mAudioTrack.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener() {
         @Override
-        void onMarkerReached (AudioTrack track) {
+        public void onMarkerReached (AudioTrack track) {
           callback.invoke("onMarkerReached");
         }
         
         @Override
-        void onPeriodicNotification (AudioTrack track) {
+        public void onPeriodicNotification (AudioTrack track) {
           callback.invoke("onPeriodicNotification");
         }
-      })
+      });
     }
   }
   
   @ReactMethod
   public void flush() {
-    mAudiotrack.flush();
+    this.mAudioTrack.flush();
   }
   
   @ReactMethod
-  public void write(String base64Data) {
+  public boolean write(String base64Data) {
     InputStream stream = new ByteArrayInputStream(base64Data.getBytes());
     Base64InputStream decoder = new Base64InputStream(stream, Base64.DEFAULT);
-    byte[] buffer = new byte[mBase64BufferSize];
-    int len;
-    while ((len = decoder.read(buffer)) != -1) {
-      mAudioTrack.write(buffer, 0, len);
+    try {
+      byte[] buffer = new byte[mBase64BufferSize];
+      int len;
+      while ((len = decoder.read(buffer)) != -1) {
+        this.mAudioTrack.write(buffer, 0, len);
+      }
+      decoder.close();
+      return true;
+    } catch (IOException e) {
+      return false;
+    } finally {
+      try {
+        if (stream != null) stream.close();
+      } catch (IOException e) {
+      }
     }
-    decoder.close();
   }
   
   @ReactMethod
   public void stop() {
-    mAudiotrack.stop();
+    this.mAudioTrack.stop();
   }
   
   @ReactMethod
   public void play() {
-    mAudiotrack.play();
+    this.mAudioTrack.play();
   }
   
   @ReactMethod
   public void release() {
-    mAudiotrack.release();
+    this.mAudioTrack.release();
   }
   
   @ReactMethod
   public int getNotificationMarkerPosition() {
-    return mAudiotrack.getNotificationMarkerPosition();
+    return this.mAudioTrack.getNotificationMarkerPosition();
   }
   
   @ReactMethod
   public int getSampleRate() {
-    return mAudiotrack.getSampleRate();
+    return this.mAudioTrack.getSampleRate();
   }
 
   @ReactMethod
-  public boolean setPositionNotificationPeriod(int periodInFrames)
-    return (mAudiotrack.setPositionNotificationPeriod(periodInFrames) == 0);
+  public boolean setPositionNotificationPeriod(int periodInFrames) {
+    return (this.mAudioTrack.setPositionNotificationPeriod(periodInFrames) == 0);
   }
 
-  private const mBase64BufferSize = 1024;
+  private static final int mBase64BufferSize = 1024;
 
-  private getAudioTrack(DecodedOptions options) {
+  private AudioTrack getAudioTrack(DecodedOptions options) {
     if (Build.VERSION.SDK_INT >= 23) {
       return buildMarshmallow(options);
     }
@@ -112,18 +132,24 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
     return buildPreLollipop(options);
   }
 
-  private Class DecodedOptions {
-    public int encoding = AudioFormat.ENCODING_DEFAULT;
+  private class DecodedOptions {
+    public int encoding;
     public int streamType;
     public int sampleRateInHz;
-    public int channelMask = AudioFormat.CHANNEL_OUT_DEFAULT;
+    public int channelMask;
     public int audioFormat;
     public int bufferSizeInBytes;
-    public int mode = AudioTrack.MODE_STATIC;
+    public int mode;
     public int sessionId;
-    public int usage = android.media.AudioAttributes.USAGE_UNKNOWN;
-    public int contentType = android.media.AudioAttributes.CONTENT_TYPE_UNKNOWN;
+    public int usage;
+    public int contentType;
+
     public DecodedOptions(ReadableMap options) {
+      this.encoding = AudioFormat.ENCODING_DEFAULT;
+      this.channelMask = AudioFormat.CHANNEL_OUT_DEFAULT;
+      this.mode = AudioTrack.MODE_STATIC;
+      this.usage = android.media.AudioAttributes.USAGE_UNKNOWN;
+      this.contentType = android.media.AudioAttributes.CONTENT_TYPE_UNKNOWN;
       ReadableMapKeySetIterator iterator = options.keySetIterator();
       while(iterator.hasNextKey()) {
         String key = iterator.nextKey();
@@ -148,7 +174,7 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
               case "e-ac-3":
                 this.encoding = AudioFormat.ENCODING_E_AC3;
                 break;
-              case "iec61937"
+              case "iec61937":
                 this.encoding = AudioFormat.ENCODING_IEC61937;
                 break;
               case "pcm16bit":
@@ -182,7 +208,7 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
                 this.streamType = AudioManager.STREAM_SYSTEM;
                 break;
               case "assistant":
-                this.usage = android.media.AudioAttributes.USAGE_ASSISTANT;
+                this.usage = 0x10; //android.media.AudioAttributes.USAGE_ASSISTANT
                 this.contentType = android.media.AudioAttributes.CONTENT_TYPE_SPEECH;
                 this.streamType = AudioManager.STREAM_MUSIC;
                 break;
@@ -251,7 +277,7 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
                 break;
               case "voicecommunicationsignalling":
               case "voicesignal":
-              case "voicesignalling"
+              case "voicesignalling":
               case "dtmf":
                 this.usage = android.media.AudioAttributes.USAGE_VOICE_COMMUNICATION_SIGNALLING;
                 this.streamType = AudioManager.STREAM_DTMF;
@@ -260,10 +286,10 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
             break;
           case "sampleRate":
           case "sampleRateInHz":
-            this.sampleRateInHz = option.getInt(key);
+            this.sampleRateInHz = options.getInt(key);
             break;
           case "channels":
-            int channels = option.getInt(key);
+            int channels = options.getInt(key);
             if (channels == 1) {
               this.channelMask = AudioFormat.CHANNEL_OUT_MONO;
             } else if (channels == 2) {
@@ -274,7 +300,7 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
             break;
           case "bufferSize":
           case "bufferSizeInBytes":
-            this.bufferSizeInBytes = option.getInt(key);
+            this.bufferSizeInBytes = options.getInt(key);
             break;
           case "mode":
             switch(options.getString(key)) {
@@ -283,7 +309,7 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
               case "forever":
                 this.mode = AudioTrack.MODE_STREAM;
                 break;
-              case "playOnce";
+              case "playOnce":
               case "static":
               case "oneTime":
               case "once":
@@ -294,7 +320,7 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
           case "id":
           case "session":
           case "sessionId":
-            this.sessionId = option.getInt(key);
+            this.sessionId = options.getInt(key);
             break;
         }
       }
@@ -304,7 +330,7 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
   @TargetApi(23)
   private AudioTrack buildMarshmallow(DecodedOptions options) {
     int bufferSize;
-    if (options.bufferSizeInBytes != null && options.bufferSizeInBytes != 0) {
+    if (options.bufferSizeInBytes != 0) {
       bufferSize = options.bufferSizeInBytes;
     } else {
       bufferSize = AudioTrack.getMinBufferSize(
@@ -313,7 +339,7 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
         options.encoding);
     }
     return new AudioTrack.Builder()
-      .setAudioAttributes(new AudioAttributes.Builder()
+      .setAudioAttributes(new android.media.AudioAttributes.Builder()
         .setUsage(options.usage)
         .setContentType(options.contentType)
         .build())
@@ -323,14 +349,14 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
         .setChannelMask(options.channelMask)
         .build())
       .setBufferSizeInBytes(bufferSize)
-      .setTransferMode(options.mode);
+      .setTransferMode(options.mode)
       .build();
   }
 
   @TargetApi(21)
-  private AudioTrack buildLollipop(ReadableMap options) {
+  private AudioTrack buildLollipop(DecodedOptions options) {
     int bufferSize;
-    if (options.bufferSizeInBytes != null && options.bufferSizeInBytes != 0) {
+    if (options.bufferSizeInBytes != 0) {
       bufferSize = options.bufferSizeInBytes;
     } else {
       bufferSize = AudioTrack.getMinBufferSize(
@@ -339,9 +365,9 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
         options.encoding);
     }
     return new AudioTrack(
-      new AudioAttributes.Builder()
-        .setUsage(AudioAttributes.USAGE_ALARM)
-        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+      new android.media.AudioAttributes.Builder()
+        .setUsage(options.usage)
+        .setContentType(options.contentType)
         .build(),
       new AudioFormat.Builder()
         .setEncoding(options.encoding)
@@ -354,9 +380,9 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
   }
 
   @Deprecated
-  private AudioTrack buildPreLollipop(ReadableMap options) {
+  private AudioTrack buildPreLollipop(DecodedOptions options) {
     int bufferSize;
-    if (options.bufferSizeInBytes != null && options.bufferSizeInBytes != 0) {
+    if (options.bufferSizeInBytes != 0) {
       bufferSize = options.bufferSizeInBytes;
     } else {
       bufferSize = AudioTrack.getMinBufferSize(
