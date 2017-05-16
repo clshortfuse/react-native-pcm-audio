@@ -16,21 +16,42 @@ import java.io.InputStream;
 import java.io.IOException;
 
 import com.facebook.react.bridge.Callback;
+import com.facebook.react.bridge.LifecycleEventListener;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.ReadableMap;
 import com.facebook.react.bridge.ReadableMapKeySetIterator;
 
+import java.util.Iterator;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PcmAudioModule extends ReactContextBaseJavaModule {
+public class PcmAudioModule extends ReactContextBaseJavaModule implements LifecycleEventListener {
 
   public PcmAudioModule(ReactApplicationContext reactContext) {
     super(reactContext);
+    reactContext.addLifecycleEventListener(this);
   }
-  
+
+  @Override
+  public void onHostResume() {
+  }
+
+  @Override
+  public void onHostPause() {
+  }
+
+  @Override
+  public void onHostDestroy() {
+    Iterator it = this.audioTracks.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry entry = (Map.Entry)it.next();
+      ((AudioTrack)entry.getValue()).release();
+      it.remove();
+    }
+  }
+
   HashMap<Integer, AudioTrack> audioTracks = new HashMap<Integer, AudioTrack>();
 
   @Override
