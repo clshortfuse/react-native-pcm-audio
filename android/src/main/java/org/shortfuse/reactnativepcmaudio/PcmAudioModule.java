@@ -27,11 +27,11 @@ import java.util.Map;
 
 public class PcmAudioModule extends ReactContextBaseJavaModule {
 
-  AudioTrack mAudioTrack;
-
   public PcmAudioModule(ReactApplicationContext reactContext) {
     super(reactContext);
   }
+  
+  HashMap<Integer, AudioTrack> audioTracks = new HashMap<Integer, AudioTrack>();
 
   @Override
   public String getName() {
@@ -47,9 +47,9 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
   @ReactMethod
   public void build(ReadableMap options, final Callback callback) {
     DecodedOptions decodedOptions = new DecodedOptions(options);
-    this.mAudioTrack = getAudioTrack(decodedOptions);
+    AudioTrack audioTrack = getAudioTrack(decodedOptions);
     if (options.hasKey("onMarkerReached") || options.hasKey("onPeriodicNotification")) {
-      this.mAudioTrack.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener() {
+      audioTrack.setPlaybackPositionUpdateListener(new AudioTrack.OnPlaybackPositionUpdateListener() {
         @Override
         public void onMarkerReached (AudioTrack track) {
           callback.invoke("onMarkerReached");
@@ -61,22 +61,25 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
         }
       });
     }
+    int sessionId = audioTrack.getAudioSessionId();
+    this.audioTracks.put(sessionId, audioTrack);
+    callback.invoke("onSessionId", sessionId);
   }
   
   @ReactMethod
-  public void flush() {
-    this.mAudioTrack.flush();
+  public void flush(int sessionId) {
+    this.audioTracks.get(sessionId).flush();
   }
   
   @ReactMethod
-  public boolean write(String base64Data) {
+  public boolean write(int sessionId, String base64Data) {
     InputStream stream = new ByteArrayInputStream(base64Data.getBytes());
     Base64InputStream decoder = new Base64InputStream(stream, Base64.DEFAULT);
     try {
       byte[] buffer = new byte[mBase64BufferSize];
       int len;
       while ((len = decoder.read(buffer)) != -1) {
-        this.mAudioTrack.write(buffer, 0, len);
+        this.audioTracks.get(sessionId).write(buffer, 0, len);
       }
       decoder.close();
       return true;
@@ -91,33 +94,34 @@ public class PcmAudioModule extends ReactContextBaseJavaModule {
   }
   
   @ReactMethod
-  public void stop() {
-    this.mAudioTrack.stop();
+  public void stop(int sessionId) {
+    this.audioTracks.get(sessionId).stop();
   }
   
   @ReactMethod
-  public void play() {
-    this.mAudioTrack.play();
+  public void play(int sessionId) {
+    this.audioTracks.get(sessionId).play();
   }
   
   @ReactMethod
-  public void release() {
-    this.mAudioTrack.release();
+  public void release(int sessionId) {
+    this.audioTracks.get(sessionId).release();
+    this.audioTracks.remove(sessionId);
   }
   
   @ReactMethod
-  public int getNotificationMarkerPosition() {
-    return this.mAudioTrack.getNotificationMarkerPosition();
+  public int getNotificationMarkerPosition(int sessionId) {
+    return this.audioTracks.get(sessionId).getNotificationMarkerPosition();
   }
   
   @ReactMethod
-  public int getSampleRate() {
-    return this.mAudioTrack.getSampleRate();
+  public int getSampleRate(int sessionId) {
+    return this.audioTracks.get(sessionId).getSampleRate();
   }
 
   @ReactMethod
-  public boolean setPositionNotificationPeriod(int periodInFrames) {
-    return (this.mAudioTrack.setPositionNotificationPeriod(periodInFrames) == 0);
+  public boolean setPositionNotificationPeriod(int sessionId, int periodInFrames) {
+    return (this.audioTracks.get(sessionId).setPositionNotificationPeriod(periodInFrames) == 0);
   }
 
   private static final int mBase64BufferSize = 1024;
