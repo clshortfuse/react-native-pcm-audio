@@ -4,7 +4,9 @@ Plays and record PCM audio
 ## Usage
 
 ### Build Session
-`NativeModules.PcmAudio.build(pcmOptions, (event, data) => {...});`
+```js
+NativeModules.PcmAudio.build(pcmOptions, (event, data) => {...});
+```
 
 **pcmOptions.encoding:**
  * `ac3 | ac-3` - AC3 Encoding
@@ -63,23 +65,30 @@ Plays and record PCM audio
 `NativeModules.PcmAudio.setPositionNotificationPeriod(sessionId, periodInFrames)`
 
 ### Write Samples
-`NativeModules.PcmAudio.write(sessionId, base64Data);`
+```js
+NativeModules.PcmAudio.write(sessionId, base64Data);
+```
 
 ### Play Audio
-`NativeModules.PcmAudio.play(sessionId);`
+```js
+NativeModules.PcmAudio.play(sessionId);
+```
 
 ### Stop Audio
-`NativeModules.PcmAudio.stop(sessionId);`
-
+```js
+NativeModules.PcmAudio.stop(sessionId);
+```
 ### Release Session
-`NativeModules.PcmAudio.release(sessionId);`
+```js
+NativeModules.PcmAudio.release(sessionId);
+```
 
 *Note: Sessions are automatically released when the React Native host is destroyed to avoid memory leaks.*
 
 ## Examples:
 
 *Create PCM session with streaming mode and store SessionID*
-```
+```js
 this.pcmAudioSessionId = null;
 
 startAudioStream = (pcmOptions) => {
@@ -122,7 +131,7 @@ stopAudioStream = () => {
 ```
 
 Stream audio:
-```
+```js
 var pcmOptions = {
   encoding: '16bit',
   usage: 'alarm',
@@ -145,7 +154,7 @@ function onAudioStreamDone() {
 ```
 
 Buffer and play on-demand:
-```
+```js
 var pcmOptions = {
   encoding: '16bit',
   usage: 'alarm',
