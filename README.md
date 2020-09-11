@@ -1,5 +1,5 @@
 # react-native-pcm-audio
-Plays and record PCM audio
+Plays and record PCM audio (Android only)
 
 ## Usage
 
